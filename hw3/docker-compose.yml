@@ -5,6 +5,11 @@ services:
     build:
       context: ..
       dockerfile: hw3/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://shop:shop@postgres:5432/shop
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8080:8080"
     restart: unless-stopped
@@ -14,6 +19,11 @@ services:
       timeout: 3s
       start_period: 10s
       retries: 3
+
+  postgres:
+    extends:
+      file: ../hw4/docker-compose.yml
+      service: postgres
 
   prometheus:
     image: prom/prometheus:v3.15.0
@@ -35,5 +45,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  postgres-data:
   prometheus-data:
   grafana-data:
