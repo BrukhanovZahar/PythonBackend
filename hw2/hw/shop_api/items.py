@@ -4,51 +4,57 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from .models import Item, ItemData, ItemFilters, ItemPatch, ItemReplacement
-from .store import store
+from .store import Store, StoreDependency
 
 router = APIRouter(prefix="/item")
 
 
-def require_item(item_id: int, include_deleted: bool = False) -> Item:
-    item = store.get_item(item_id)
+def require_item(
+    item_id: int, store: Store, include_deleted: bool = False, lock: bool = False
+) -> Item:
+    item = store.get_item(item_id, lock=lock)
     if item is None or (item.deleted and not include_deleted):
         raise HTTPException(HTTPStatus.NOT_FOUND, "Item not found")
     return item
 
 
 @router.post("", status_code=HTTPStatus.CREATED)
-async def create_item(data: ItemData, response: Response) -> Item:
+def create_item(data: ItemData, response: Response, store: StoreDependency) -> Item:
     item = store.create_item(data)
     response.headers["Location"] = f"/item/{item.id}"
     return item
 
 
 @router.get("")
-async def list_items(filters: Annotated[ItemFilters, Query()]) -> list[Item]:
+def list_items(
+    filters: Annotated[ItemFilters, Query()], store: StoreDependency
+) -> list[Item]:
     return store.list_items(filters)
 
 
 @router.get("/{item_id}")
-async def get_item(item_id: int) -> Item:
-    return require_item(item_id)
+def get_item(item_id: int, store: StoreDependency) -> Item:
+    return require_item(item_id, store)
 
 
 @router.put("/{item_id}")
-async def replace_item(item_id: int, data: ItemReplacement) -> Item:
-    require_item(item_id, include_deleted=True)
+def replace_item(item_id: int, data: ItemReplacement, store: StoreDependency) -> Item:
+    require_item(item_id, store, include_deleted=True, lock=True)
     return store.replace_item(item_id, data)
 
 
 @router.patch("/{item_id}", response_model=Item)
-async def patch_item(item_id: int, data: ItemPatch) -> Item | Response:
-    item = require_item(item_id, include_deleted=True)
+def patch_item(
+    item_id: int, data: ItemPatch, store: StoreDependency
+) -> Item | Response:
+    item = require_item(item_id, store, include_deleted=True, lock=True)
     if item.deleted:
         return Response(status_code=HTTPStatus.NOT_MODIFIED)
     return store.patch_item(item_id, data)
 
 
 @router.delete("/{item_id}")
-async def delete_item(item_id: int) -> Response:
-    require_item(item_id, include_deleted=True)
+def delete_item(item_id: int, store: StoreDependency) -> Response:
+    require_item(item_id, store, include_deleted=True, lock=True)
     store.delete_item(item_id)
     return Response(status_code=HTTPStatus.OK)
