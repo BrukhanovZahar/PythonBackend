@@ -72,7 +72,7 @@ uvicorn shop_api.main:app --port 8081
 
 ```sh
 export TEST_DATABASE_URL=postgresql+psycopg://shop:shop@localhost:7432/shop
-PYTHONPATH=hw2/hw pytest hw2/hw/test_homework2.py hw2/hw/test_storage.py -v
+PYTHONPATH=hw2/hw pytest hw2/hw -v --cov=shop_api --cov-branch --cov-report=term-missing --cov-fail-under=95
 python hw4/isolation.py
 
 ```
@@ -80,3 +80,5 @@ python hw4/isolation.py
 Тесты создают и удаляют собственную схему в БД из `TEST_DATABASE_URL`.
 Пользователю БД нужны права создания схем. Преподавательские тесты сохранены.
 В CI проверки запускаются на PostgreSQL с Python 3.13 и 3.14.
+Покрытие измеряется для всего пакета `shop_api`, включая WebSocket-чат.
+При покрытии ниже 95% проверка завершается ошибкой.

@@ -12,6 +12,7 @@ on:
 jobs:
   test-hw2:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       matrix:
         python-version: ["3.13", "3.14"]
@@ -54,7 +55,7 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}/hw2/hw
       run: |
-        pytest test_homework2.py test_storage.py -v
+        pytest . -v --cov=shop_api --cov-branch --cov-report=term-missing --cov-fail-under=95
 
     - name: Run isolation examples
       run: python hw4/isolation.py

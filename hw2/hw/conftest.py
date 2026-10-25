@@ -2,7 +2,9 @@ import os
 from uuid import uuid4
 
 import pytest
+from fastapi.testclient import TestClient
 from shop_api import database
+from shop_api.main import app
 from sqlalchemy import create_engine
 from sqlalchemy.schema import CreateSchema, DropSchema
 
@@ -29,3 +31,18 @@ def test_database():
         with engine.begin() as connection:
             connection.execute(DropSchema(schema, cascade=True))
         engine.dispose()
+
+
+@pytest.fixture()
+def isolated_api(test_database, monkeypatch):
+    schema = "test_api_" + uuid4().hex
+    with test_database.begin() as connection:
+        connection.execute(CreateSchema(schema))
+    engine = test_database.execution_options(schema_translate_map={None: schema})
+    monkeypatch.setattr(database, "engine", engine)
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        with test_database.begin() as connection:
+            connection.execute(DropSchema(schema, cascade=True))
